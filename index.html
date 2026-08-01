@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TypeMD</title>
+  </head>
+  <body>
+    <div id="toolbar" data-tauri-drag-region>
+      <div class="tb-group tb-left">
+        <button id="btn-sidebar" class="tb-btn" title="Toggle sidebar (Ctrl+B)"></button>
+        <button id="btn-open" class="tb-btn" title="Open file (Ctrl+O)"></button>
+        <button id="btn-open-folder" class="tb-btn" title="Open folder (Ctrl+Shift+O)"></button>
+        <button id="btn-new" class="tb-btn" title="New file (Ctrl+N)"></button>
+      </div>
+      <div class="tb-group tb-center" data-tauri-drag-region>
+        <span id="doc-title">Untitled</span>
+        <span id="dirty-dot" title="Unsaved changes"></span>
+      </div>
+      <div class="tb-group tb-right">
+        <button id="btn-find" class="tb-btn" title="Find & replace (Ctrl+F)"></button>
+        <button id="btn-export" class="tb-btn" title="Export (Ctrl+E)"></button>
+        <button id="btn-outline" class="tb-btn" title="Toggle outline (Ctrl+Shift+K)"></button>
+        <button id="btn-theme" class="tb-btn" title="Toggle theme"></button>
+        <button id="btn-settings" class="tb-btn" title="Settings (Ctrl+,)"></button>
+      </div>
+    </div>
+
+    <div id="body-row">
+      <aside id="sidebar" hidden>
+        <div id="sidebar-header">
+          <span id="folder-name">No folder open</span>
+        </div>
+        <div id="file-tree"></div>
+      </aside>
+
+      <div id="editor-wrap">
+        <div id="find-bar" hidden>
+          <div class="find-line">
+            <input id="find-input" type="text" placeholder="Find" spellcheck="false" />
+            <span id="find-count" class="find-count">0/0</span>
+            <button id="find-prev" class="find-btn" title="Previous (Shift+Enter)"></button>
+            <button id="find-next" class="find-btn" title="Next (Enter)"></button>
+            <button id="find-close" class="find-btn" title="Close (Esc)"></button>
+          </div>
+          <div class="find-line">
+            <input id="replace-input" type="text" placeholder="Replace" spellcheck="false" />
+            <button id="replace-one" class="find-text-btn">Replace</button>
+            <button id="replace-all" class="find-text-btn">All</button>
+          </div>
+        </div>
+        <main id="editor"></main>
+      </div>
+
+      <aside id="outline" hidden>
+        <div id="outline-header">Outline</div>
+        <div id="outline-list"></div>
+      </aside>
+    </div>
+
+    <div id="statusbar">
+      <span id="word-count">0 words</span>
+      <span id="save-hint"></span>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
