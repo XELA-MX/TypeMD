@@ -180,4 +180,35 @@ export async function openFolder(): Promise<OpenedFolder | null> {
   return isTauri() ? tauriOpenFolder() : null;
 }
 
+/** Re-read a folder's markdown tree (after a file operation). */
+export async function refreshTree(path: string): Promise<FileNode[]> {
+  return isTauri() ? readTree(path, 0) : [];
+}
+
+export function joinPath(dir: string, name: string): string {
+  return `${dir.replace(/\/$/, "")}/${name}`;
+}
+
+// --- File operations (Tauri only) ------------------------------------------
+
+export async function createFile(path: string): Promise<void> {
+  const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+  await writeTextFile(path, "");
+}
+
+export async function createDir(path: string): Promise<void> {
+  const { mkdir } = await import("@tauri-apps/plugin-fs");
+  await mkdir(path, { recursive: true });
+}
+
+export async function renamePath(from: string, to: string): Promise<void> {
+  const { rename } = await import("@tauri-apps/plugin-fs");
+  await rename(from, to);
+}
+
+export async function removePath(path: string, isDir: boolean): Promise<void> {
+  const { remove } = await import("@tauri-apps/plugin-fs");
+  await remove(path, isDir ? { recursive: true } : undefined);
+}
+
 export { isTauri };

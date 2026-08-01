@@ -1,5 +1,6 @@
-import type { Settings, ThemeChoice, LineWidth } from "./settings";
+import type { Settings, LineWidth } from "./settings";
 import type { SoundLevel } from "./keysound";
+import { THEME_OPTIONS } from "./themes";
 import { icons } from "./icons";
 
 /**
@@ -40,12 +41,8 @@ export function openSettingsPanel(
     section("Appearance", [
       row(
         "Theme",
-        segmented<ThemeChoice>(
-          [
-            ["system", "System"],
-            ["light", "Light"],
-            ["dark", "Dark"],
-          ],
+        select(
+          THEME_OPTIONS.map((t) => [t.id, t.name] as [string, string]),
           settings.theme,
           (v) => update({ theme: v }),
         ),
@@ -96,6 +93,10 @@ export function openSettingsPanel(
       ),
     ]),
     section("Behavior", [
+      row(
+        "Autosave",
+        toggle(settings.autosave, (v) => update({ autosave: v })),
+      ),
       row(
         "Confirm before discarding unsaved changes",
         toggle(settings.confirmOnClose, (v) => update({ confirmOnClose: v })),
@@ -169,6 +170,24 @@ function segmented<T extends string>(
     group.append(btn);
   }
   return group;
+}
+
+function select(
+  options: [string, string][],
+  value: string,
+  onPick: (v: string) => void,
+): HTMLElement {
+  const el = document.createElement("select");
+  el.className = "settings-select";
+  for (const [val, text] of options) {
+    const opt = document.createElement("option");
+    opt.value = val;
+    opt.textContent = text;
+    if (val === value) opt.selected = true;
+    el.append(opt);
+  }
+  el.addEventListener("change", () => onPick(el.value));
+  return el;
 }
 
 function stepper(

@@ -24,6 +24,11 @@
         <button id="btn-outline" class="tb-btn" title="Toggle outline (Ctrl+Shift+K)"></button>
         <button id="btn-theme" class="tb-btn" title="Toggle theme"></button>
         <button id="btn-settings" class="tb-btn" title="Settings (Ctrl+,)"></button>
+        <span class="win-controls">
+          <button id="win-min" class="tb-btn" title="Minimize"></button>
+          <button id="win-max" class="tb-btn" title="Maximize"></button>
+          <button id="win-close" class="tb-btn win-close" title="Close"></button>
+        </span>
       </div>
     </div>
 
@@ -31,6 +36,10 @@
       <aside id="sidebar" hidden>
         <div id="sidebar-header">
           <span id="folder-name">No folder open</span>
+          <div class="sidebar-actions">
+            <button id="btn-new-file" class="sb-btn" title="New file in folder"></button>
+            <button id="btn-new-folder" class="sb-btn" title="New folder"></button>
+          </div>
         </div>
         <div id="file-tree"></div>
       </aside>

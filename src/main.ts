@@ -5,7 +5,14 @@ import {
   openFileByPath,
   saveFile,
   isTauri,
+  refreshTree,
+  joinPath,
+  createFile,
+  createDir,
+  renamePath,
+  removePath,
   type OpenedFile,
+  type FileNode,
 } from "./files";
 import {
   loadSettings,
@@ -16,13 +23,16 @@ import {
 } from "./settings";
 import { openSettingsPanel } from "./settingsPanel";
 import { openExportDialog } from "./export";
-import { Sidebar } from "./sidebar";
+import { openCommandPalette, type Command } from "./commandPalette";
+import { Sidebar, type SidebarAction } from "./sidebar";
 import { Outline } from "./outline";
+import { promptModal } from "./prompt";
 import { FindReplace } from "./findReplace";
 import { enableImages } from "./images";
 import { SourceMode } from "./sourceMode";
 import { WritingModes } from "./writingModes";
 import { attachMermaid, setMermaidDark } from "./mermaidView";
+import { installThemes } from "./themes";
 import { setIcon } from "./icons";
 import { KeySound } from "./keysound";
 import "./styles.css";
@@ -62,6 +72,9 @@ const state: DocState = {
 
 let settings: Settings = loadSettings();
 
+let folderPath: string | null = null;
+let folderTree: FileNode[] = [];
+
 const keySound = new KeySound();
 
 // --- DOM references --------------------------------------------------------
@@ -92,14 +105,18 @@ const editor = new Editor(editorRoot, {
     // Rebuild the outline shortly after typing settles.
     window.clearTimeout(outlineTimer);
     outlineTimer = window.setTimeout(() => outline.rebuild(), 300);
+    scheduleAutosave();
   },
 });
 
 // --- Sidebar & outline -----------------------------------------------------
 
-const sidebar = new Sidebar($("file-tree"), $("folder-name"), (path) => {
-  void openFromTree(path);
-});
+const sidebar = new Sidebar(
+  $("file-tree"),
+  $("folder-name"),
+  (path) => void openFromTree(path),
+  (action, node) => void handleSidebarAction(action, node),
+);
 
 const outline = new Outline($("outline-list"), editorRoot);
 
@@ -128,6 +145,7 @@ const sourceMode = new SourceMode(
       renderChrome();
     }
     updateWordCount(sourceMode.currentMarkdown());
+    scheduleAutosave();
   },
 );
 
@@ -217,6 +235,8 @@ async function doOpen(): Promise<void> {
 async function doOpenFolder(): Promise<void> {
   const folder = await openFolder();
   if (!folder) return;
+  folderPath = folder.path;
+  folderTree = folder.tree;
   sidebar.setFolder(folder.name, folder.tree);
   setSidebarVisible(true);
 }
@@ -248,6 +268,126 @@ async function doNew(): Promise<void> {
 
 function doExport(): void {
   openExportDialog(currentMarkdown(), state.name);
+}
+
+// --- Autosave --------------------------------------------------------------
+
+let autosaveTimer: number | undefined;
+
+function scheduleAutosave(): void {
+  if (!settings.autosave || !state.path) return;
+  window.clearTimeout(autosaveTimer);
+  autosaveTimer = window.setTimeout(() => void autosaveNow(), 1200);
+}
+
+async function autosaveNow(): Promise<void> {
+  if (!state.dirty || !state.path) return;
+  const saved = await saveFile(currentMarkdown(), state.path);
+  if (!saved) return;
+  state.dirty = false;
+  renderChrome();
+  flashHint("Autosaved");
+}
+
+// --- Command palette -------------------------------------------------------
+
+function flattenFiles(nodes: FileNode[], out: FileNode[] = []): FileNode[] {
+  for (const n of nodes) {
+    if (n.isDir) flattenFiles(n.children ?? [], out);
+    else out.push(n);
+  }
+  return out;
+}
+
+function buildCommands(): Command[] {
+  const cmds: Command[] = [
+    { id: "new", title: "New file", hint: "Ctrl+N", run: () => void doNew() },
+    { id: "open", title: "Open file…", hint: "Ctrl+O", run: () => void doOpen() },
+    { id: "openFolder", title: "Open folder…", hint: "Ctrl+Shift+O", run: () => void doOpenFolder() },
+    { id: "save", title: "Save", hint: "Ctrl+S", run: () => void doSave() },
+    { id: "export", title: "Export…", hint: "Ctrl+E", run: () => doExport() },
+    { id: "find", title: "Find & replace", hint: "Ctrl+F", run: () => findReplace.open() },
+    { id: "source", title: "Toggle source view", hint: "Ctrl+/", run: () => void sourceMode.toggle() },
+    { id: "sidebar", title: "Toggle sidebar", hint: "Ctrl+B", run: toggleSidebar },
+    { id: "outline", title: "Toggle outline", hint: "Ctrl+Shift+K", run: toggleOutline },
+    { id: "theme", title: "Toggle theme", run: toggleTheme },
+    { id: "focus", title: "Toggle focus mode", run: () => applyAndSave({ ...settings, focusMode: !settings.focusMode }) },
+    { id: "typewriter", title: "Toggle typewriter mode", run: () => applyAndSave({ ...settings, typewriterMode: !settings.typewriterMode }) },
+    { id: "settings", title: "Settings", hint: "Ctrl+,", run: () => openSettingsPanel(settings, applyAndSave) },
+  ];
+
+  // Quick-open files from the current folder.
+  for (const f of flattenFiles(folderTree)) {
+    cmds.push({
+      id: `file:${f.path}`,
+      title: f.name,
+      hint: "file",
+      run: () => void openFromTree(f.path),
+    });
+  }
+  return cmds;
+}
+
+// --- Sidebar file operations -----------------------------------------------
+
+const parentDir = (path: string): string =>
+  path.slice(0, path.lastIndexOf("/")) || "/";
+
+async function refreshFolder(): Promise<void> {
+  if (!folderPath) return;
+  folderTree = await refreshTree(folderPath);
+  sidebar.updateTree(folderTree);
+  sidebar.setActive(state.path);
+}
+
+async function handleSidebarAction(
+  action: SidebarAction,
+  node: FileNode | null,
+): Promise<void> {
+  try {
+    if (action === "newFile") {
+      const dir = node?.isDir ? node.path : folderPath;
+      if (!dir) return;
+      let name = await promptModal("New file name", "untitled.md", "Create");
+      if (!name) return;
+      if (!/\.[^.]+$/.test(name)) name += ".md";
+      const path = joinPath(dir, name);
+      await createFile(path);
+      await refreshFolder();
+      await openFromTree(path);
+    } else if (action === "newFolder") {
+      const dir = node?.isDir ? node.path : folderPath;
+      if (!dir) return;
+      const name = await promptModal("New folder name", "", "Create");
+      if (!name) return;
+      await createDir(joinPath(dir, name));
+      await refreshFolder();
+    } else if (action === "rename" && node) {
+      const name = await promptModal("Rename", node.name, "Rename");
+      if (!name || name === node.name) return;
+      const to = joinPath(parentDir(node.path), name);
+      await renamePath(node.path, to);
+      if (node.path === state.path) {
+        state.path = to;
+        state.name = name;
+        rememberLast(to);
+        renderChrome();
+      }
+      await refreshFolder();
+    } else if (action === "delete" && node) {
+      const what = node.isDir ? "folder and its contents" : "file";
+      if (!confirm(`Delete ${node.name}? This deletes the ${what}.`)) return;
+      await removePath(node.path, node.isDir);
+      if (node.path === state.path) {
+        state.path = null;
+        renderChrome();
+      }
+      await refreshFolder();
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    flashHint(`Error: ${msg}`);
+  }
 }
 
 // --- Sidebar visibility ----------------------------------------------------
@@ -298,6 +438,15 @@ function wireToolbar(): void {
   $("btn-settings").addEventListener("click", () =>
     openSettingsPanel(settings, applyAndSave),
   );
+
+  setIcon($("btn-new-file"), "filePlus");
+  setIcon($("btn-new-folder"), "folder");
+  $("btn-new-file").addEventListener("click", () =>
+    void handleSidebarAction("newFile", null),
+  );
+  $("btn-new-folder").addEventListener("click", () =>
+    void handleSidebarAction("newFolder", null),
+  );
 }
 
 // Typing sound — capture phase so it fires for every key regardless of where
@@ -333,6 +482,9 @@ window.addEventListener("keydown", (e) => {
   } else if (key === "/") {
     e.preventDefault();
     void sourceMode.toggle();
+  } else if (key === "p") {
+    e.preventDefault();
+    openCommandPalette(buildCommands());
   } else if (key === "e") {
     e.preventDefault();
     void doExport();
@@ -371,7 +523,27 @@ async function restoreLastFile(): Promise<boolean> {
   return true;
 }
 
+async function wireWindowControls(): Promise<void> {
+  const { getCurrentWindow } = await import("@tauri-apps/api/window");
+  const win = getCurrentWindow();
+  setIcon($("win-min"), "winMin");
+  setIcon($("win-close"), "close");
+
+  const paintMax = async () => {
+    setIcon($("win-max"), (await win.isMaximized()) ? "winRestore" : "winMax");
+  };
+  void paintMax();
+
+  $("win-min").addEventListener("click", () => void win.minimize());
+  $("win-max").addEventListener("click", async () => {
+    await win.toggleMaximize();
+    void paintMax();
+  });
+  $("win-close").addEventListener("click", () => void win.close());
+}
+
 async function boot(): Promise<void> {
+  installThemes();
   applySettings(settings);
   keySound.setConfig(settings.keySound, settings.keySoundLevel);
   writingModes.setModes(settings.focusMode, settings.typewriterMode);
@@ -391,6 +563,7 @@ async function boot(): Promise<void> {
   if (isTauri()) {
     document.body.classList.add("is-tauri");
     void wireCloseGuard();
+    void wireWindowControls();
   }
 }
 

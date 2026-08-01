@@ -5,11 +5,21 @@
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:window:allow-start-dragging",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-is-maximized",
+    "core:window:allow-close",
     "dialog:default",
     "fs:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
     "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-rename",
+    "fs:allow-remove",
     {
       "identifier": "fs:scope",
       "allow": [{ "path": "**" }, { "path": "$HOME/**" }, { "path": "/**" }]

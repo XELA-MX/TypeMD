@@ -20,6 +20,9 @@ export const icons = {
   arrowDown: svg(`<line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/>`),
   arrowUp: svg(`<line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/>`),
   code: svg(`<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>`),
+  winMin: svg(`<line x1="5" y1="12" x2="19" y2="12"/>`),
+  winMax: svg(`<rect x="5" y="5" width="14" height="14" rx="1.5"/>`),
+  winRestore: svg(`<rect x="7" y="7" width="12" height="12" rx="1.5"/><path d="M5 15V6a1 1 0 0 1 1-1h9"/>`),
   markdown: svg(`<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15V9l2.5 3L12 9v6"/><path d="M16 9v4M16 13l-1.5-1.5M16 13l1.5-1.5"/>`),
 };
 
