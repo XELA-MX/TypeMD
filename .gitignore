@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Tauri / Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Editor / OS
+.DS_Store
+*.local
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Generated icon source raster (kept SVG source, not the PNG)
+src-tauri/app-icon.png

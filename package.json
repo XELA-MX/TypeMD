@@ -1,0 +1,25 @@
+{
+  "name": "typemd",
+  "version": "0.1.0",
+  "description": "A minimalist, modern WYSIWYG markdown editor — a Typora alternative for Linux.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@milkdown/crepe": "^7.5.0",
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-fs": "^2.2.0",
+    "marked": "^15.0.12"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.3"
+  }
+}
