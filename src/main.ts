@@ -29,7 +29,7 @@ import { openExportDialog } from "./export";
 import { openCommandPalette, type Command } from "./commandPalette";
 import { Sidebar, type SidebarAction } from "./sidebar";
 import { Outline } from "./outline";
-import { promptModal } from "./prompt";
+import { promptModal, confirmUnsaved } from "./prompt";
 import { FindReplace } from "./findReplace";
 import { enableImages } from "./images";
 import { SourceMode } from "./sourceMode";
@@ -104,9 +104,21 @@ const btnTheme = $("btn-theme");
 
 let outlineTimer: number | undefined;
 
+// Serialized markdown of the freshly loaded document, used as the baseline so
+// Crepe's initial render doesn't count as an unsaved edit.
+let loadedContent = "";
+let isLoading = false;
+
 const editor = new Editor(editorRoot, {
   onChange: (markdown) => {
     state.content = markdown;
+    // The change Crepe emits while a document is loading is the baseline, not
+    // a user edit.
+    if (isLoading) {
+      loadedContent = markdown;
+      return;
+    }
+    if (markdown === loadedContent) return;
     if (!state.dirty) {
       state.dirty = true;
       renderChrome();
@@ -168,12 +180,19 @@ function currentMarkdown(): string {
 
 /** Load content into the editor and refresh derived views. */
 async function reloadEditor(content: string): Promise<void> {
+  // Baseline against Crepe's own serialization so the initial render isn't seen
+  // as a user edit. Note: this does NOT reset `state.dirty` — the caller owns
+  // that (adopt() clears it on open; source-view exit keeps it).
+  isLoading = true;
   await editor.load(content);
+  loadedContent = editor.getMarkdown();
+  isLoading = false;
   editor.setSpellcheck(false); // suppress native underlines; we use our own
   outline.rebuild();
   attachMermaid(editor.getView(), isDark());
   writingModes.refresh();
   void setupSpellcheck(editor.getView(), settings.spellcheck);
+  renderChrome();
 }
 
 // --- UI updates ------------------------------------------------------------
@@ -276,7 +295,12 @@ function adopt(file: OpenedFile): void {
 
 async function guardUnsaved(): Promise<boolean> {
   if (!state.dirty || !settings.confirmOnClose) return true;
-  return confirm("Discard unsaved changes?");
+  const choice = await confirmUnsaved(state.name);
+  if (choice === "save") {
+    await doSave();
+    return !state.dirty; // proceed only if the save actually went through
+  }
+  return choice === "discard";
 }
 
 async function doOpen(): Promise<void> {
@@ -576,15 +600,20 @@ window.addEventListener("keydown", (e) => {
 
 async function wireCloseGuard(): Promise<void> {
   const { getCurrentWindow } = await import("@tauri-apps/api/window");
-  const { ask } = await import("@tauri-apps/plugin-dialog");
   const win = getCurrentWindow();
   await win.onCloseRequested(async (event) => {
+    // No unsaved work → let it close immediately.
     if (!state.dirty || !settings.confirmOnClose) return;
-    const proceed = await ask("You have unsaved changes. Close anyway?", {
-      title: "TypeMD",
-      kind: "warning",
-    });
-    if (!proceed) event.preventDefault();
+    // Block the close and ask with our own, clearly visible modal.
+    event.preventDefault();
+    const choice = await confirmUnsaved(state.name);
+    if (choice === "save") {
+      await doSave();
+      if (!state.dirty) await win.destroy();
+    } else if (choice === "discard") {
+      await win.destroy();
+    }
+    // cancel → stay open
   });
 }
 

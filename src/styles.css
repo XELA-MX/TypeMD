@@ -266,6 +266,20 @@ body.is-tauri .win-controls {
   font-size: 15px;
   font-weight: 600;
 }
+.prompt-message {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tm-muted);
+}
+.prompt-btn.danger {
+  color: #fff;
+  background: #e5484d;
+  border-color: transparent;
+}
+.prompt-btn.danger:hover {
+  background: #d13c41;
+}
 .prompt-input {
   width: 100%;
   height: 34px;

@@ -1,3 +1,67 @@
+export type UnsavedChoice = "save" | "discard" | "cancel";
+
+/**
+ * A clearly visible "unsaved changes" modal with Save / Discard / Cancel.
+ * Replaces the easy-to-miss native confirm dialog.
+ */
+export function confirmUnsaved(docName: string): Promise<UnsavedChoice> {
+  return new Promise((resolve) => {
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+
+    const panel = document.createElement("div");
+    panel.className = "modal-panel prompt-panel";
+
+    const h = document.createElement("h2");
+    h.className = "prompt-title";
+    h.textContent = "Unsaved changes";
+
+    const msg = document.createElement("p");
+    msg.className = "prompt-message";
+    msg.textContent = `“${docName}” has changes that haven't been saved. Save them before closing?`;
+
+    const actions = document.createElement("div");
+    actions.className = "prompt-actions";
+    const cancel = document.createElement("button");
+    cancel.className = "prompt-btn";
+    cancel.textContent = "Cancel";
+    const discard = document.createElement("button");
+    discard.className = "prompt-btn danger";
+    discard.textContent = "Discard";
+    const save = document.createElement("button");
+    save.className = "prompt-btn primary";
+    save.textContent = "Save";
+    actions.append(cancel, discard, save);
+
+    panel.append(h, msg, actions);
+    backdrop.append(panel);
+    document.body.append(backdrop);
+
+    const done = (choice: UnsavedChoice) => {
+      backdrop.remove();
+      document.removeEventListener("keydown", onKey, true);
+      resolve(choice);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        done("cancel");
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        done("save");
+      }
+    };
+    cancel.addEventListener("click", () => done("cancel"));
+    discard.addEventListener("click", () => done("discard"));
+    save.addEventListener("click", () => done("save"));
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) done("cancel");
+    });
+    document.addEventListener("keydown", onKey, true);
+    save.focus();
+  });
+}
+
 /**
  * Small modal prompt for a single line of text (e.g. a new file name).
  * Resolves to the trimmed value, or null if cancelled.
