@@ -21,6 +21,7 @@ export interface Settings {
   focusMode: boolean; // dim everything but the active block
   typewriterMode: boolean; // keep the caret vertically centered
   autosave: boolean; // silently save the current file after edits settle
+  spellcheck: boolean; // native spellchecking in the editor
 }
 
 export const DEFAULTS: Settings = {
@@ -34,6 +35,7 @@ export const DEFAULTS: Settings = {
   focusMode: false,
   typewriterMode: false,
   autosave: false,
+  spellcheck: true,
 };
 
 const STORAGE_KEY = "typemd.settings";

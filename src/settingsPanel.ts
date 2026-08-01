@@ -73,6 +73,10 @@ export function openSettingsPanel(
         "Typewriter mode (center the caret)",
         toggle(settings.typewriterMode, (v) => update({ typewriterMode: v })),
       ),
+      row(
+        "Spellcheck",
+        toggle(settings.spellcheck, (v) => update({ spellcheck: v })),
+      ),
     ]),
     section("Sound", [
       row(

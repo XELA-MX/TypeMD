@@ -453,6 +453,36 @@ body.is-tauri .win-controls {
   border-radius: 8px;
 }
 
+/* --- Spellcheck ---------------------------------------------------------- */
+
+.spell-error {
+  text-decoration: underline wavy #e5484d;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+/* Right-click suggestions menu (builds on .ctx-menu / .ctx-item) */
+.spell-menu {
+  z-index: 70;
+  min-width: 170px;
+}
+.spell-menu .ctx-item {
+  text-transform: none;
+  letter-spacing: normal;
+}
+.ctx-item.disabled {
+  color: var(--tm-muted);
+  cursor: default;
+}
+.ctx-item.disabled:hover {
+  background: transparent;
+}
+.ctx-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--tm-border);
+}
+
 /* --- Status bar ---------------------------------------------------------- */
 
 #statusbar {

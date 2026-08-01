@@ -180,6 +180,37 @@ export async function openFolder(): Promise<OpenedFolder | null> {
   return isTauri() ? tauriOpenFolder() : null;
 }
 
+// --- Native OS integration -------------------------------------------------
+
+/** A file path passed on the command line (`typemd note.md`), if any. */
+export async function getInitialFile(): Promise<OpenedFile | null> {
+  if (!isTauri()) return null;
+  const { invoke } = await import("@tauri-apps/api/core");
+  const path = await invoke<string | null>("initial_file");
+  return path ? tauriOpenPath(path) : null;
+}
+
+/** Fired when a second instance is launched with a file (e.g. double-click). */
+export async function onOpenFileRequested(
+  cb: (file: OpenedFile) => void,
+): Promise<void> {
+  if (!isTauri()) return;
+  const { listen } = await import("@tauri-apps/api/event");
+  await listen<string>("open-file", async (e) => {
+    if (e.payload) cb(await tauriOpenPath(e.payload));
+  });
+}
+
+/** Watch a file for external changes. Returns an unwatch function. */
+export async function watchFile(
+  path: string,
+  onChange: () => void,
+): Promise<() => void> {
+  if (!isTauri()) return () => {};
+  const { watch } = await import("@tauri-apps/plugin-fs");
+  return watch(path, () => onChange(), { delayMs: 300 });
+}
+
 /** Re-read a folder's markdown tree (after a file operation). */
 export async function refreshTree(path: string): Promise<FileNode[]> {
   return isTauri() ? readTree(path, 0) : [];

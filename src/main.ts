@@ -11,6 +11,9 @@ import {
   createDir,
   renamePath,
   removePath,
+  getInitialFile,
+  onOpenFileRequested,
+  watchFile,
   type OpenedFile,
   type FileNode,
 } from "./files";
@@ -32,6 +35,7 @@ import { enableImages } from "./images";
 import { SourceMode } from "./sourceMode";
 import { WritingModes } from "./writingModes";
 import { attachMermaid, setMermaidDark } from "./mermaidView";
+import { setupSpellcheck } from "./spellcheck";
 import { installThemes } from "./themes";
 import { setIcon } from "./icons";
 import { KeySound } from "./keysound";
@@ -53,6 +57,8 @@ Happy writing.
 `;
 
 const LAST_FILE_KEY = "typemd.lastFile";
+const RECENTS_KEY = "typemd.recents";
+const MAX_RECENTS = 12;
 
 // --- App state -------------------------------------------------------------
 
@@ -74,6 +80,10 @@ let settings: Settings = loadSettings();
 
 let folderPath: string | null = null;
 let folderTree: FileNode[] = [];
+
+// External-change watch state.
+let unwatch: (() => void) | null = null;
+let ignoreWatchUntil = 0;
 
 const keySound = new KeySound();
 
@@ -159,9 +169,11 @@ function currentMarkdown(): string {
 /** Load content into the editor and refresh derived views. */
 async function reloadEditor(content: string): Promise<void> {
   await editor.load(content);
+  editor.setSpellcheck(false); // suppress native underlines; we use our own
   outline.rebuild();
   attachMermaid(editor.getView(), isDark());
   writingModes.refresh();
+  void setupSpellcheck(editor.getView(), settings.spellcheck);
 }
 
 // --- UI updates ------------------------------------------------------------
@@ -199,6 +211,7 @@ function applyAndSave(next: Settings): void {
   keySound.setConfig(settings.keySound, settings.keySoundLevel);
   writingModes.setModes(settings.focusMode, settings.typewriterMode);
   setMermaidDark(isDark());
+  void setupSpellcheck(editor.getView(), settings.spellcheck);
 }
 
 // --- Document actions ------------------------------------------------------
@@ -207,15 +220,58 @@ function rememberLast(path: string | null): void {
   if (path) localStorage.setItem(LAST_FILE_KEY, path);
 }
 
+interface Recent {
+  path: string;
+  name: string;
+}
+
+function loadRecents(): Recent[] {
+  try {
+    return JSON.parse(localStorage.getItem(RECENTS_KEY) || "[]") as Recent[];
+  } catch {
+    return [];
+  }
+}
+
+function addRecent(file: OpenedFile): void {
+  if (!file.path) return;
+  const path = file.path;
+  const recents = loadRecents().filter((r) => r.path !== path);
+  recents.unshift({ path, name: file.name });
+  localStorage.setItem(RECENTS_KEY, JSON.stringify(recents.slice(0, MAX_RECENTS)));
+}
+
+async function restartWatch(): Promise<void> {
+  unwatch?.();
+  unwatch = null;
+  if (isTauri() && state.path) {
+    unwatch = await watchFile(state.path, () => void onFileChangedExternally());
+  }
+}
+
+async function onFileChangedExternally(): Promise<void> {
+  if (Date.now() < ignoreWatchUntil || !state.path) return;
+  const fresh = await openFileByPath(state.path);
+  if (!fresh || fresh.content === currentMarkdown()) return;
+  if (state.dirty) {
+    flashHint("File changed on disk");
+    return;
+  }
+  adopt(fresh);
+  await reloadEditor(fresh.content);
+}
+
 function adopt(file: OpenedFile): void {
   state.path = file.path;
   state.name = file.name;
   state.content = file.content;
   state.dirty = false;
   rememberLast(file.path);
+  addRecent(file);
   renderChrome();
   updateWordCount(file.content);
   sidebar.setActive(file.path);
+  void restartWatch();
 }
 
 async function guardUnsaved(): Promise<boolean> {
@@ -251,8 +307,17 @@ async function openFromTree(path: string): Promise<void> {
   editor.focus();
 }
 
+/** Open a file handed to us by the OS (CLI arg or a second instance). */
+async function openIncoming(file: OpenedFile): Promise<void> {
+  if (!(await guardUnsaved())) return;
+  adopt(file);
+  await reloadEditor(file.content);
+  editor.focus();
+}
+
 async function doSave(): Promise<void> {
   const content = currentMarkdown();
+  ignoreWatchUntil = Date.now() + 1200;
   const saved = await saveFile(content, state.path);
   if (!saved) return;
   adopt(saved);
@@ -282,6 +347,7 @@ function scheduleAutosave(): void {
 
 async function autosaveNow(): Promise<void> {
   if (!state.dirty || !state.path) return;
+  ignoreWatchUntil = Date.now() + 1200;
   const saved = await saveFile(currentMarkdown(), state.path);
   if (!saved) return;
   state.dirty = false;
@@ -316,8 +382,20 @@ function buildCommands(): Command[] {
     { id: "settings", title: "Settings", hint: "Ctrl+,", run: () => openSettingsPanel(settings, applyAndSave) },
   ];
 
+  // Recently opened files.
+  for (const r of loadRecents()) {
+    cmds.push({
+      id: `recent:${r.path}`,
+      title: r.name,
+      hint: "recent",
+      run: () => void openFromTree(r.path),
+    });
+  }
+
   // Quick-open files from the current folder.
+  const seen = new Set(loadRecents().map((r) => r.path));
   for (const f of flattenFiles(folderTree)) {
+    if (seen.has(f.path)) continue;
     cmds.push({
       id: `file:${f.path}`,
       title: f.name,
@@ -552,8 +630,17 @@ async function boot(): Promise<void> {
   wireToolbar();
   enableImages(editor, editorRoot);
 
-  const restored = await restoreLastFile();
-  if (!restored) {
+  // A file passed on the command line wins over the restored last file.
+  const initial = await getInitialFile();
+  let opened = false;
+  if (initial) {
+    adopt(initial);
+    await reloadEditor(initial.content);
+    opened = true;
+  } else {
+    opened = await restoreLastFile();
+  }
+  if (!opened) {
     await reloadEditor(state.content);
     renderChrome();
     updateWordCount(state.content);
@@ -564,6 +651,7 @@ async function boot(): Promise<void> {
     document.body.classList.add("is-tauri");
     void wireCloseGuard();
     void wireWindowControls();
+    void onOpenFileRequested((file) => void openIncoming(file));
   }
 }
 

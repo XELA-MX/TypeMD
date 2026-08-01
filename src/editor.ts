@@ -66,6 +66,12 @@ export class Editor {
     editable?.focus();
   }
 
+  setSpellcheck(on: boolean): void {
+    this.root
+      .querySelector<HTMLElement>(".ProseMirror")
+      ?.setAttribute("spellcheck", String(on));
+  }
+
   async destroy(): Promise<void> {
     if (this.crepe) {
       await this.crepe.destroy();
