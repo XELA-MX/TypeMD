@@ -16,6 +16,8 @@ export interface Settings {
   restoreLast: boolean; // reopen the last file on startup (Tauri only)
   keySound: boolean; // mechanical typing sound
   keySoundLevel: SoundLevel; // volume of the typing sound
+  focusMode: boolean; // dim everything but the active block
+  typewriterMode: boolean; // keep the caret vertically centered
 }
 
 export const DEFAULTS: Settings = {
@@ -26,6 +28,8 @@ export const DEFAULTS: Settings = {
   restoreLast: true,
   keySound: true,
   keySoundLevel: "medium",
+  focusMode: false,
+  typewriterMode: false,
 };
 
 const STORAGE_KEY = "typemd.settings";

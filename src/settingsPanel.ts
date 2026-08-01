@@ -68,6 +68,14 @@ export function openSettingsPanel(
         "Font size",
         stepper(settings.fontSize, 12, 24, (v) => update({ fontSize: v })),
       ),
+      row(
+        "Focus mode (dim inactive text)",
+        toggle(settings.focusMode, (v) => update({ focusMode: v })),
+      ),
+      row(
+        "Typewriter mode (center the caret)",
+        toggle(settings.typewriterMode, (v) => update({ typewriterMode: v })),
+      ),
     ]),
     section("Sound", [
       row(

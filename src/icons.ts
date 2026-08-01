@@ -19,6 +19,7 @@ export const icons = {
   download: svg(`<path d="M12 3v12"/><polyline points="7 10 12 15 17 10"/><path d="M5 21h14"/>`),
   arrowDown: svg(`<line x1="12" y1="5" x2="12" y2="19"/><polyline points="6 13 12 19 18 13"/>`),
   arrowUp: svg(`<line x1="12" y1="19" x2="12" y2="5"/><polyline points="6 11 12 5 18 11"/>`),
+  code: svg(`<polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>`),
   markdown: svg(`<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 15V9l2.5 3L12 9v6"/><path d="M16 9v4M16 13l-1.5-1.5M16 13l1.5-1.5"/>`),
 };
 

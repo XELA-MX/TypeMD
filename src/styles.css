@@ -252,6 +252,72 @@ body {
   background: transparent;
 }
 
+/* --- Source view --------------------------------------------------------- */
+
+#source-view {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: var(--tm-content-width);
+  margin: 0 auto;
+  padding: 48px 32px 40vh;
+  border: none;
+  outline: none;
+  resize: none;
+  background: var(--tm-bg);
+  color: var(--tm-fg);
+  font-family: "Space Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 14px;
+  line-height: 1.7;
+  tab-size: 2;
+}
+#source-view[hidden] {
+  display: none;
+}
+
+/* --- Focus & typewriter modes ------------------------------------------- */
+
+.tm-focus .ProseMirror > * {
+  transition: opacity 0.2s ease;
+  opacity: 0.32;
+}
+.tm-focus .ProseMirror > .tm-active {
+  opacity: 1;
+}
+.tm-typewriter .ProseMirror {
+  padding-top: 42vh;
+}
+
+/* --- Mermaid diagrams ---------------------------------------------------- */
+
+.mermaid-render {
+  display: flex;
+  justify-content: center;
+  padding: 8px 16px 20px;
+  margin: 0 auto;
+  max-width: var(--tm-content-width);
+  overflow-x: auto;
+}
+.mermaid-render svg {
+  max-width: 100%;
+  height: auto;
+}
+.mermaid-loading,
+.mermaid-empty {
+  color: var(--tm-muted);
+  font-size: 13px;
+  font-style: italic;
+}
+.mermaid-error {
+  color: #e5484d;
+  font-family: "Space Mono", ui-monospace, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  padding: 8px 12px;
+  border: 1px solid #e5484d55;
+  border-radius: 8px;
+}
+
 /* --- Status bar ---------------------------------------------------------- */
 
 #statusbar {

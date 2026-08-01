@@ -20,6 +20,9 @@ import { Sidebar } from "./sidebar";
 import { Outline } from "./outline";
 import { FindReplace } from "./findReplace";
 import { enableImages } from "./images";
+import { SourceMode } from "./sourceMode";
+import { WritingModes } from "./writingModes";
+import { attachMermaid, setMermaidDark } from "./mermaidView";
 import { setIcon } from "./icons";
 import { KeySound } from "./keysound";
 import "./styles.css";
@@ -112,10 +115,35 @@ const findReplace = new FindReplace(editor, {
   replaceAll: $("replace-all"),
 });
 
+const writingModes = new WritingModes(editor, editorRoot);
+
+const sourceMode = new SourceMode(
+  editor,
+  editorRoot,
+  $<HTMLTextAreaElement>("source-view"),
+  (md) => reloadEditor(md),
+  () => {
+    if (!state.dirty) {
+      state.dirty = true;
+      renderChrome();
+    }
+    updateWordCount(sourceMode.currentMarkdown());
+  },
+);
+
+const isDark = (): boolean => document.documentElement.dataset.theme === "dark";
+
+/** The authoritative markdown, accounting for source-view edits. */
+function currentMarkdown(): string {
+  return sourceMode.currentMarkdown();
+}
+
 /** Load content into the editor and refresh derived views. */
 async function reloadEditor(content: string): Promise<void> {
   await editor.load(content);
   outline.rebuild();
+  attachMermaid(editor.getView(), isDark());
+  writingModes.refresh();
 }
 
 // --- UI updates ------------------------------------------------------------
@@ -151,6 +179,8 @@ function applyAndSave(next: Settings): void {
   saveSettings(settings);
   updateThemeIcon();
   keySound.setConfig(settings.keySound, settings.keySoundLevel);
+  writingModes.setModes(settings.focusMode, settings.typewriterMode);
+  setMermaidDark(isDark());
 }
 
 // --- Document actions ------------------------------------------------------
@@ -202,7 +232,7 @@ async function openFromTree(path: string): Promise<void> {
 }
 
 async function doSave(): Promise<void> {
-  const content = editor.getMarkdown();
+  const content = currentMarkdown();
   const saved = await saveFile(content, state.path);
   if (!saved) return;
   adopt(saved);
@@ -217,7 +247,7 @@ async function doNew(): Promise<void> {
 }
 
 function doExport(): void {
-  openExportDialog(editor.getMarkdown(), state.name);
+  openExportDialog(currentMarkdown(), state.name);
 }
 
 // --- Sidebar visibility ----------------------------------------------------
@@ -250,6 +280,7 @@ function wireToolbar(): void {
   setIcon($("btn-open-folder"), "folder");
   setIcon($("btn-new"), "filePlus");
   setIcon($("btn-find"), "search");
+  setIcon($("btn-source"), "code");
   setIcon($("btn-export"), "download");
   setIcon($("btn-outline"), "list");
   setIcon($("btn-settings"), "settings");
@@ -260,6 +291,7 @@ function wireToolbar(): void {
   $("btn-open-folder").addEventListener("click", () => void doOpenFolder());
   $("btn-new").addEventListener("click", () => void doNew());
   $("btn-find").addEventListener("click", () => findReplace.toggle());
+  $("btn-source").addEventListener("click", () => void sourceMode.toggle());
   $("btn-export").addEventListener("click", () => void doExport());
   $("btn-outline").addEventListener("click", toggleOutline);
   $("btn-theme").addEventListener("click", toggleTheme);
@@ -298,6 +330,9 @@ window.addEventListener("keydown", (e) => {
   } else if (key === "f") {
     e.preventDefault();
     findReplace.open();
+  } else if (key === "/") {
+    e.preventDefault();
+    void sourceMode.toggle();
   } else if (key === "e") {
     e.preventDefault();
     void doExport();
@@ -339,6 +374,8 @@ async function restoreLastFile(): Promise<boolean> {
 async function boot(): Promise<void> {
   applySettings(settings);
   keySound.setConfig(settings.keySound, settings.keySoundLevel);
+  writingModes.setModes(settings.focusMode, settings.typewriterMode);
+  setMermaidDark(isDark());
   watchSystemTheme(() => settings);
   wireToolbar();
   enableImages(editor, editorRoot);
