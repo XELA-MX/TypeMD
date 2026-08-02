@@ -52,6 +52,12 @@ export class KeySound {
     }
   }
 
+  /** Resume the audio context if the browser/OS suspended it (focus loss,
+   *  autoplay policy, output device change). Safe to call anytime. */
+  resume(): void {
+    if (this.ctx && this.ctx.state !== "running") void this.ctx.resume();
+  }
+
   /** Lazily build the audio graph. Safe to call inside a keydown gesture. */
   private ensure(): boolean {
     if (this.ctx) {

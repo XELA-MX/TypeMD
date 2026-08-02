@@ -401,6 +401,42 @@ body.is-tauri .win-controls {
   background: transparent;
 }
 
+/* Clear heading hierarchy — Crepe's default sizes are too close together. */
+.milkdown .ProseMirror :is(h1, h2, h3, h4, h5, h6) {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 1.6em 0 0.6em;
+}
+.milkdown .ProseMirror h1 {
+  font-size: 2.4em;
+  letter-spacing: -0.02em;
+}
+.milkdown .ProseMirror h2 {
+  font-size: 1.75em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--tm-border);
+}
+.milkdown .ProseMirror h3 {
+  font-size: 1.35em;
+}
+.milkdown .ProseMirror h4 {
+  font-size: 1.1em;
+}
+.milkdown .ProseMirror h5 {
+  font-size: 0.95em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tm-muted);
+}
+.milkdown .ProseMirror h6 {
+  font-size: 0.9em;
+  color: var(--tm-muted);
+}
+.milkdown .ProseMirror h1:first-child,
+.milkdown .ProseMirror h2:first-child {
+  margin-top: 0.2em;
+}
+
 /* --- Source view --------------------------------------------------------- */
 
 #source-view {

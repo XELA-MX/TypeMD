@@ -555,6 +555,13 @@ function wireToolbar(): void {
 // focus sits (editor, sidebar, etc.).
 window.addEventListener("keydown", (e) => keySound.play(e), { capture: true });
 
+// Recover the audio context if the OS/WebView suspends it (focus loss, etc.).
+window.addEventListener("focus", () => keySound.resume());
+window.addEventListener("pointerdown", () => keySound.resume(), { capture: true });
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) keySound.resume();
+});
+
 window.addEventListener("keydown", (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return;
