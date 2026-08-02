@@ -38,7 +38,6 @@ import { attachMermaid, setMermaidDark } from "./mermaidView";
 import { setupSpellcheck } from "./spellcheck";
 import { installThemes } from "./themes";
 import { setIcon } from "./icons";
-import { KeySound } from "./keysound";
 import "./styles.css";
 
 const DEFAULT_DOC = `# Welcome to TypeMD
@@ -84,8 +83,6 @@ let folderTree: FileNode[] = [];
 // External-change watch state.
 let unwatch: (() => void) | null = null;
 let ignoreWatchUntil = 0;
-
-const keySound = new KeySound();
 
 // --- DOM references --------------------------------------------------------
 
@@ -227,7 +224,6 @@ function applyAndSave(next: Settings): void {
   applySettings(settings);
   saveSettings(settings);
   updateThemeIcon();
-  keySound.setConfig(settings.keySound, settings.keySoundLevel);
   writingModes.setModes(settings.focusMode, settings.typewriterMode);
   setMermaidDark(isDark());
   void setupSpellcheck(editor.getView(), settings.spellcheck);
@@ -551,17 +547,6 @@ function wireToolbar(): void {
   );
 }
 
-// Typing sound — capture phase so it fires for every key regardless of where
-// focus sits (editor, sidebar, etc.).
-window.addEventListener("keydown", (e) => keySound.play(e), { capture: true });
-
-// Recover the audio context if the OS/WebView suspends it (focus loss, etc.).
-window.addEventListener("focus", () => keySound.resume());
-window.addEventListener("pointerdown", () => keySound.resume(), { capture: true });
-document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) keySound.resume();
-});
-
 window.addEventListener("keydown", (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod) return;
@@ -659,7 +644,6 @@ async function wireWindowControls(): Promise<void> {
 async function boot(): Promise<void> {
   installThemes();
   applySettings(settings);
-  keySound.setConfig(settings.keySound, settings.keySoundLevel);
   writingModes.setModes(settings.focusMode, settings.typewriterMode);
   setMermaidDark(isDark());
   watchSystemTheme(() => settings);

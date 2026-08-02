@@ -1,5 +1,4 @@
 import type { Settings, LineWidth } from "./settings";
-import type { SoundLevel } from "./keysound";
 import { THEME_OPTIONS } from "./themes";
 import { icons } from "./icons";
 
@@ -76,24 +75,6 @@ export function openSettingsPanel(
       row(
         "Spellcheck",
         toggle(settings.spellcheck, (v) => update({ spellcheck: v })),
-      ),
-    ]),
-    section("Sound", [
-      row(
-        "Mechanical keyboard sound",
-        toggle(settings.keySound, (v) => update({ keySound: v })),
-      ),
-      row(
-        "Sound volume",
-        segmented<SoundLevel>(
-          [
-            ["soft", "Soft"],
-            ["medium", "Medium"],
-            ["loud", "Loud"],
-          ],
-          settings.keySoundLevel,
-          (v) => update({ keySoundLevel: v }),
-        ),
       ),
     ]),
     section("Behavior", [

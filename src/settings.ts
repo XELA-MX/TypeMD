@@ -3,7 +3,6 @@
  * DOM. Works in both the Tauri WebView and a plain browser.
  */
 
-import type { SoundLevel } from "./keysound";
 import { SKINS, skinMode } from "./themes";
 
 // "system" | "light" | "dark" | a skin id from themes.ts
@@ -16,8 +15,6 @@ export interface Settings {
   fontSize: number; // px, applied to the editor body text
   confirmOnClose: boolean; // warn before discarding unsaved changes
   restoreLast: boolean; // reopen the last file on startup (Tauri only)
-  keySound: boolean; // mechanical typing sound
-  keySoundLevel: SoundLevel; // volume of the typing sound
   focusMode: boolean; // dim everything but the active block
   typewriterMode: boolean; // keep the caret vertically centered
   autosave: boolean; // silently save the current file after edits settle
@@ -30,8 +27,6 @@ export const DEFAULTS: Settings = {
   fontSize: 17,
   confirmOnClose: true,
   restoreLast: true,
-  keySound: true,
-  keySoundLevel: "medium",
   focusMode: false,
   typewriterMode: false,
   autosave: false,
